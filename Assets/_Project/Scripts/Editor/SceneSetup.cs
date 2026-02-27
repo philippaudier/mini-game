@@ -123,39 +123,55 @@ public static class SceneSetup
         // ── Carousel ScrollRect ──
         var scrollGO = new GameObject("CarouselScroll");
         scrollGO.transform.SetParent(canvasGO.transform, false);
+        var scrollRectTransform = scrollGO.GetComponent<RectTransform>();
+        scrollRectTransform.anchorMin = new Vector2(0, 0.15f);
+        scrollRectTransform.anchorMax = new Vector2(1, 0.85f);
+        scrollRectTransform.offsetMin = Vector2.zero;
+        scrollRectTransform.offsetMax = Vector2.zero;
+
+        // Viewport (child with Mask — this is what clips the content)
+        var viewportGO = new GameObject("Viewport");
+        viewportGO.transform.SetParent(scrollGO.transform, false);
+        var viewportRect = viewportGO.AddComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = Vector2.zero;
+        viewportRect.offsetMax = Vector2.zero;
+        var viewportImg = viewportGO.AddComponent<Image>();
+        viewportImg.color = new Color(1, 1, 1, 0);
+        viewportImg.raycastTarget = true;
+        viewportGO.AddComponent<Mask>().showMaskGraphic = false;
+
+        // Content (child of Viewport — holds the cards)
+        var contentGO = new GameObject("Content");
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRect = contentGO.AddComponent<RectTransform>();
+        // Stretch full height, grow horizontally from left
+        contentRect.anchorMin = new Vector2(0, 0);
+        contentRect.anchorMax = new Vector2(0, 1);
+        contentRect.pivot = new Vector2(0, 0.5f);
+        contentRect.offsetMin = Vector2.zero;
+        contentRect.offsetMax = Vector2.zero;
+        var hlg = contentGO.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 40;
+        hlg.childAlignment = TextAnchor.MiddleCenter;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+        hlg.childControlWidth = false;
+        hlg.childControlHeight = false;
+        hlg.padding = new RectOffset(240, 240, 30, 30);
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        csf.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        // ScrollRect component (on the parent, references viewport + content)
         var scrollRect = scrollGO.AddComponent<ScrollRect>();
         scrollRect.horizontal = true;
         scrollRect.vertical = false;
         scrollRect.movementType = ScrollRect.MovementType.Elastic;
         scrollRect.elasticity = 0.1f;
         scrollRect.decelerationRate = 0.05f;
-        var scrollRectTransform = scrollGO.GetComponent<RectTransform>();
-        scrollRectTransform.anchorMin = new Vector2(0, 0.15f);
-        scrollRectTransform.anchorMax = new Vector2(1, 0.85f);
-        scrollRectTransform.offsetMin = Vector2.zero;
-        scrollRectTransform.offsetMax = Vector2.zero;
-        var scrollImg = scrollGO.AddComponent<Image>();
-        scrollImg.color = new Color(0, 0, 0, 0);
-        scrollGO.AddComponent<Mask>().showMaskGraphic = false;
-
-        // Content
-        var contentGO = new GameObject("Content");
-        contentGO.transform.SetParent(scrollGO.transform, false);
-        var contentRect = contentGO.AddComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0, 0);
-        contentRect.anchorMax = new Vector2(0, 1);
-        contentRect.pivot = new Vector2(0, 0.5f);
-        contentRect.sizeDelta = new Vector2(0, 0);
-        var hlg = contentGO.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 40;
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = false;
-        hlg.padding = new RectOffset(240, 240, 20, 20);
-        var csf = contentGO.AddComponent<ContentSizeFitter>();
-        csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-        csf.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
-
+        scrollRect.viewport = viewportRect;
         scrollRect.content = contentRect;
 
         // ── Pagination Dots ──
