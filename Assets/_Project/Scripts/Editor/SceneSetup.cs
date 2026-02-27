@@ -120,105 +120,37 @@ public static class SceneSetup
         titleRect.anchoredPosition = new Vector2(0, -80);
         titleRect.sizeDelta = new Vector2(800, 120);
 
-        // ── Carousel ScrollRect ──
-        var scrollGO = new GameObject("CarouselScroll", typeof(RectTransform));
-        scrollGO.transform.SetParent(canvasGO.transform, false);
-        var scrollRectTransform = scrollGO.GetComponent<RectTransform>();
-        scrollRectTransform.anchorMin = new Vector2(0, 0.15f);
-        scrollRectTransform.anchorMax = new Vector2(1, 0.85f);
-        scrollRectTransform.offsetMin = Vector2.zero;
-        scrollRectTransform.offsetMax = Vector2.zero;
+        // ── Game List (simple vertical menu) ──
+        var listGO = new GameObject("GameList", typeof(RectTransform));
+        listGO.transform.SetParent(canvasGO.transform, false);
+        var listRect = listGO.GetComponent<RectTransform>();
+        listRect.anchorMin = new Vector2(0.1f, 0.2f);
+        listRect.anchorMax = new Vector2(0.9f, 0.8f);
+        listRect.offsetMin = Vector2.zero;
+        listRect.offsetMax = Vector2.zero;
+        var vlg = listGO.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 30;
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
+        vlg.padding = new RectOffset(20, 20, 20, 20);
 
-        // Viewport (child with Mask — this is what clips the content)
-        var viewportGO = new GameObject("Viewport", typeof(RectTransform));
-        viewportGO.transform.SetParent(scrollGO.transform, false);
-        var viewportRect = viewportGO.GetComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = Vector2.zero;
-        viewportRect.offsetMax = Vector2.zero;
-        var viewportImg = viewportGO.AddComponent<Image>();
-        viewportImg.color = new Color(1, 1, 1, 0);
-        viewportImg.raycastTarget = true;
-        viewportGO.AddComponent<Mask>().showMaskGraphic = false;
-
-        // Content (child of Viewport — holds the cards)
-        var contentGO = new GameObject("Content", typeof(RectTransform));
-        contentGO.transform.SetParent(viewportGO.transform, false);
-        var contentRect = contentGO.GetComponent<RectTransform>();
-        // Stretch full height, grow horizontally from left
-        contentRect.anchorMin = new Vector2(0, 0);
-        contentRect.anchorMax = new Vector2(0, 1);
-        contentRect.pivot = new Vector2(0, 0.5f);
-        contentRect.offsetMin = Vector2.zero;
-        contentRect.offsetMax = Vector2.zero;
-        var hlg = contentGO.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 40;
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = false;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
-        hlg.padding = new RectOffset(240, 240, 30, 30);
-        var csf = contentGO.AddComponent<ContentSizeFitter>();
-        csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-        csf.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
-
-        // ScrollRect component (on the parent, references viewport + content)
-        var scrollRect = scrollGO.AddComponent<ScrollRect>();
-        scrollRect.horizontal = true;
-        scrollRect.vertical = false;
-        scrollRect.movementType = ScrollRect.MovementType.Elastic;
-        scrollRect.elasticity = 0.1f;
-        scrollRect.decelerationRate = 0.05f;
-        scrollRect.viewport = viewportRect;
-        scrollRect.content = contentRect;
-
-        // ── Pagination Dots ──
-        var dotsGO = new GameObject("Dots");
-        dotsGO.transform.SetParent(canvasGO.transform, false);
-        var dotsRect = dotsGO.GetComponent<RectTransform>();
-        if (dotsRect == null) dotsRect = dotsGO.AddComponent<RectTransform>();
-        dotsRect.anchorMin = new Vector2(0.5f, 0.1f);
-        dotsRect.anchorMax = new Vector2(0.5f, 0.1f);
-        dotsRect.sizeDelta = new Vector2(300, 30);
-        var dotsHlg = dotsGO.AddComponent<HorizontalLayoutGroup>();
-        dotsHlg.spacing = 15;
-        dotsHlg.childAlignment = TextAnchor.MiddleCenter;
-        dotsHlg.childForceExpandWidth = false;
-        dotsHlg.childForceExpandHeight = false;
-
-        // ── Dot Prefab ──
+        // ── Menu Button Prefab ──
         EnsureFolder("Assets/_Project/Prefabs/UI");
-        var dotPrefabGO = new GameObject("Dot");
-        var dotImg = dotPrefabGO.AddComponent<Image>();
-        dotImg.color = Color.white;
-        var dotRectT = dotPrefabGO.GetComponent<RectTransform>();
-        dotRectT.sizeDelta = new Vector2(20, 20);
-        var dotLE = dotPrefabGO.AddComponent<LayoutElement>();
-        dotLE.preferredWidth = 20;
-        dotLE.preferredHeight = 20;
-        string dotPrefabPath = "Assets/_Project/Prefabs/UI/Dot.prefab";
-        PrefabUtility.SaveAsPrefabAsset(dotPrefabGO, dotPrefabPath);
-        Object.DestroyImmediate(dotPrefabGO);
-        var dotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(dotPrefabPath);
+        var menuBtnPrefab = CreateMenuButtonPrefab();
+        string menuBtnPath = "Assets/_Project/Prefabs/UI/MenuButton.prefab";
+        PrefabUtility.SaveAsPrefabAsset(menuBtnPrefab, menuBtnPath);
+        Object.DestroyImmediate(menuBtnPrefab);
+        var menuBtnAsset = AssetDatabase.LoadAssetAtPath<GameObject>(menuBtnPath);
 
-        // ── MiniGameCard Prefab ──
-        var cardPrefabGO = CreateMiniGameCardPrefab();
-        string cardPrefabPath = "Assets/_Project/Prefabs/UI/MiniGameCard.prefab";
-        PrefabUtility.SaveAsPrefabAsset(cardPrefabGO, cardPrefabPath);
-        Object.DestroyImmediate(cardPrefabGO);
-        var cardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(cardPrefabPath);
-
-        // ── CarouselController ──
-        var carousel = scrollGO.AddComponent<CarouselController>();
-        var carouselSO = new SerializedObject(carousel);
-        carouselSO.FindProperty("scrollRect").objectReferenceValue = scrollRect;
-        carouselSO.FindProperty("contentPanel").objectReferenceValue = contentRect;
-        carouselSO.FindProperty("miniGameCardPrefab").objectReferenceValue = cardPrefab;
-        carouselSO.FindProperty("dotsContainer").objectReferenceValue = dotsGO.transform;
-        carouselSO.FindProperty("dotPrefab").objectReferenceValue = dotPrefab;
-        carouselSO.ApplyModifiedPropertiesWithoutUndo();
+        // ── SimpleMenuController ──
+        var menuCtrl = listGO.AddComponent<SimpleMenuController>();
+        var menuSO = new SerializedObject(menuCtrl);
+        menuSO.FindProperty("buttonContainer").objectReferenceValue = listGO.transform;
+        menuSO.FindProperty("buttonPrefab").objectReferenceValue = menuBtnAsset;
+        menuSO.ApplyModifiedPropertiesWithoutUndo();
 
         // ── EventSystem ──
         CreateEventSystem();
@@ -405,6 +337,50 @@ public static class SceneSetup
     // ──────────────────────────────────────────────
     //  HELPERS
     // ──────────────────────────────────────────────
+
+    private static GameObject CreateMenuButtonPrefab()
+    {
+        // Big button: colored background, game name + high score
+        var btnGO = new GameObject("MenuButton", typeof(RectTransform));
+        var btnRect = btnGO.GetComponent<RectTransform>();
+        btnRect.sizeDelta = new Vector2(0, 160);
+        var btnLE = btnGO.AddComponent<LayoutElement>();
+        btnLE.preferredHeight = 160;
+        btnLE.minHeight = 160;
+
+        var btnImg = btnGO.AddComponent<Image>();
+        btnImg.color = new Color(0.2f, 0.7f, 0.9f);
+        var btn = btnGO.AddComponent<Button>();
+        btn.targetGraphic = btnImg;
+        var colors = btn.colors;
+        colors.highlightedColor = new Color(1, 1, 1, 0.85f);
+        colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
+        btn.colors = colors;
+
+        // Game name (large)
+        var nameGO = CreateTMPText("GameName", btnGO.transform, "Game Name", 42);
+        var nameRect = nameGO.GetComponent<RectTransform>();
+        nameRect.anchorMin = new Vector2(0, 0.35f);
+        nameRect.anchorMax = new Vector2(1, 1f);
+        nameRect.offsetMin = new Vector2(30, 0);
+        nameRect.offsetMax = new Vector2(-30, -10);
+        var nameTMP = nameGO.GetComponent<TextMeshProUGUI>();
+        nameTMP.fontStyle = FontStyles.Bold;
+        nameTMP.alignment = TextAlignmentOptions.Center;
+
+        // High score (smaller, below)
+        var hsGO = CreateTMPText("HighScore", btnGO.transform, "Best: 0", 26);
+        var hsRect = hsGO.GetComponent<RectTransform>();
+        hsRect.anchorMin = new Vector2(0, 0f);
+        hsRect.anchorMax = new Vector2(1, 0.4f);
+        hsRect.offsetMin = new Vector2(30, 10);
+        hsRect.offsetMax = new Vector2(-30, 0);
+        var hsTMP = hsGO.GetComponent<TextMeshProUGUI>();
+        hsTMP.color = new Color(1f, 1f, 1f, 0.7f);
+        hsTMP.alignment = TextAlignmentOptions.Center;
+
+        return btnGO;
+    }
 
     private static GameObject CreateMiniGameCardPrefab()
     {
