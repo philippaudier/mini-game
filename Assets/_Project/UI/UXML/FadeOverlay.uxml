@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="../USS/Common.uss" />
+    <ui:Style src="../USS/FadeOverlay.uss" />
+    <ui:VisualElement name="fade-overlay" picking-mode="Ignore" />
+</ui:UXML>

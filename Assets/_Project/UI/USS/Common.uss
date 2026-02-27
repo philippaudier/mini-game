@@ -1,0 +1,20 @@
+/* ── Common variables & resets ── */
+:root {
+    --color-bg: rgb(31, 31, 46);
+    --color-panel: rgba(38, 38, 56, 0.95);
+    --color-text-white: rgb(255, 255, 255);
+    --color-text-muted: rgb(180, 180, 190);
+    --color-gold: rgb(255, 230, 77);
+    --color-green: rgb(51, 191, 102);
+    --color-gray: rgb(128, 128, 153);
+    --font-size-title: 72px;
+    --font-size-score: 96px;
+    --font-size-large: 52px;
+    --font-size-medium: 42px;
+    --font-size-body: 30px;
+    --font-size-small: 26px;
+}
+
+.hidden {
+    display: none;
+}

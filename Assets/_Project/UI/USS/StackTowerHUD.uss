@@ -1,0 +1,115 @@
+/* ── Stack Tower HUD ── */
+#hud-root {
+    flex-grow: 1;
+}
+
+#score-label {
+    font-size: var(--font-size-score);
+    color: var(--color-text-white);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+}
+
+#perfect-label {
+    font-size: 56px;
+    color: var(--color-gold);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    position: absolute;
+    top: 35%;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    scale: 1;
+    transition-property: opacity, scale;
+    transition-duration: 0.5s;
+}
+
+#perfect-label.visible {
+    opacity: 1;
+    scale: 1.15;
+}
+
+/* ── Game Over ── */
+#game-over-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+#game-over-container {
+    width: 80%;
+    background-color: var(--color-panel);
+    border-radius: 20px;
+    padding: 40px;
+    align-items: center;
+}
+
+#game-over-title {
+    font-size: var(--font-size-large);
+    color: var(--color-text-white);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+}
+
+#final-score {
+    font-size: 40px;
+    color: var(--color-text-white);
+    -unity-text-align: middle-center;
+    margin-bottom: 10px;
+}
+
+#high-score {
+    font-size: 32px;
+    color: var(--color-gold);
+    -unity-text-align: middle-center;
+    margin-bottom: 30px;
+}
+
+#button-row {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.go-button {
+    height: 70px;
+    border-radius: 12px;
+    padding: 0 30px;
+    margin: 0 15px;
+    justify-content: center;
+    align-items: center;
+    transition-property: scale;
+    transition-duration: 0.1s;
+}
+
+.go-button:active {
+    scale: 0.95;
+    opacity: 0.85;
+}
+
+.go-button Label {
+    font-size: var(--font-size-body);
+    color: var(--color-text-white);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+#restart-button {
+    background-color: var(--color-green);
+    min-width: 220px;
+}
+
+#menu-button {
+    background-color: var(--color-gray);
+    min-width: 160px;
+}

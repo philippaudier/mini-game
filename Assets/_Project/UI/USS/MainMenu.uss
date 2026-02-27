@@ -1,0 +1,60 @@
+/* ── Main Menu ── */
+#main-menu-root {
+    flex-grow: 1;
+    background-color: var(--color-bg);
+    align-items: center;
+    padding-top: 80px;
+    padding-bottom: 40px;
+}
+
+#title {
+    font-size: var(--font-size-title);
+    color: var(--color-text-white);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: 60px;
+    letter-spacing: 4px;
+}
+
+#game-list {
+    flex-grow: 1;
+    width: 80%;
+}
+
+#game-list #unity-content-container {
+    padding-top: 20px;
+    padding-bottom: 20px;
+    align-items: center;
+}
+
+/* ── Menu button ── */
+.menu-button {
+    width: 100%;
+    height: 160px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    padding: 20px 30px;
+    justify-content: center;
+    align-items: center;
+    transition-property: scale;
+    transition-duration: 0.1s;
+}
+
+.menu-button:active {
+    scale: 0.96;
+    opacity: 0.85;
+}
+
+.menu-button .game-name {
+    font-size: var(--font-size-medium);
+    color: var(--color-text-white);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.menu-button .high-score {
+    font-size: var(--font-size-small);
+    color: rgba(255, 255, 255, 0.7);
+    -unity-text-align: middle-center;
+    margin-top: 6px;
+}

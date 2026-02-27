@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement class="menu-button">
+        <ui:Label class="game-name" text="Game Name" />
+        <ui:Label class="high-score" text="Best: 0" />
+    </ui:VisualElement>
+</ui:UXML>

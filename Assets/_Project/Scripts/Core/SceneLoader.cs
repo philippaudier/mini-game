@@ -1,12 +1,13 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 public class SceneLoader : MonoBehaviour
 {
     public static SceneLoader Instance { get; private set; }
 
-    [SerializeField] private CanvasGroup fadeCanvasGroup;
+    [SerializeField] private UIDocument fadeUIDocument;
     [SerializeField] private float fadeDuration = 0.4f;
 
     private bool isLoading;
@@ -22,6 +23,17 @@ public class SceneLoader : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private VisualElement GetFadeOverlay()
+    {
+        if (fadeUIDocument == null) return null;
+        return fadeUIDocument.rootVisualElement?.Q("fade-overlay");
+    }
+
+    public void SetFadeUIDocument(UIDocument doc)
+    {
+        fadeUIDocument = doc;
+    }
+
     public void LoadScene(string sceneName)
     {
         if (!isLoading)
@@ -32,39 +44,42 @@ public class SceneLoader : MonoBehaviour
     {
         isLoading = true;
 
-        // Fade out
-        if (fadeCanvasGroup != null)
+        // Fade out (to black)
+        var overlay = GetFadeOverlay();
+        if (overlay != null)
         {
-            yield return StartCoroutine(Fade(0f, 1f));
+            yield return StartCoroutine(Fade(overlay, 0f, 1f));
         }
 
         AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
         while (!op.isDone)
             yield return null;
 
-        // Fade in
-        if (fadeCanvasGroup != null)
+        // Re-query after scene load (visual tree may have been rebuilt)
+        overlay = GetFadeOverlay();
+        if (overlay != null)
         {
-            yield return StartCoroutine(Fade(1f, 0f));
+            yield return StartCoroutine(Fade(overlay, 1f, 0f));
         }
 
         isLoading = false;
     }
 
-    private IEnumerator Fade(float from, float to)
+    private IEnumerator Fade(VisualElement overlay, float from, float to)
     {
         float elapsed = 0f;
-        fadeCanvasGroup.alpha = from;
-        fadeCanvasGroup.blocksRaycasts = true;
+        overlay.style.opacity = from;
+        overlay.pickingMode = PickingMode.Position; // Block input during fade
 
         while (elapsed < fadeDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            fadeCanvasGroup.alpha = Mathf.Lerp(from, to, elapsed / fadeDuration);
+            float t = Mathf.Clamp01(elapsed / fadeDuration);
+            overlay.style.opacity = Mathf.Lerp(from, to, t);
             yield return null;
         }
 
-        fadeCanvasGroup.alpha = to;
-        fadeCanvasGroup.blocksRaycasts = to > 0.5f;
+        overlay.style.opacity = to;
+        overlay.pickingMode = to > 0.5f ? PickingMode.Position : PickingMode.Ignore;
     }
 }

@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="../USS/Common.uss" />
+    <ui:Style src="../USS/MainMenu.uss" />
+    <ui:VisualElement name="main-menu-root">
+        <ui:Label name="title" text="MINI GAMES" />
+        <ui:ScrollView name="game-list" mode="Vertical" horizontal-scroller-visibility="Hidden" />
+    </ui:VisualElement>
+</ui:UXML>

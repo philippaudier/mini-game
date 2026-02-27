@@ -1,35 +1,32 @@
 using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using TMPro;
 
 public static class SceneSetup
 {
-    // Cached TMP font
-    private static TMP_FontAsset tmpFont;
+    private const string UxmlRoot = "Assets/_Project/UI/UXML/";
+    private const string PanelSettingsPath = "Assets/_Project/UI/DefaultPanelSettings.asset";
 
-    private static TMP_FontAsset GetTMPFont()
+    // ──────────────────────────────────────────────
+    //  PANEL SETTINGS
+    // ──────────────────────────────────────────────
+    private static PanelSettings GetOrCreatePanelSettings()
     {
-        if (tmpFont != null) return tmpFont;
+        var ps = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+        if (ps != null) return ps;
 
-        // Try TMP default font
-        tmpFont = TMP_Settings.defaultFontAsset;
-        if (tmpFont != null) return tmpFont;
+        ps = ScriptableObject.CreateInstance<PanelSettings>();
+        ps.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+        ps.referenceResolution = new Vector2Int(1080, 1920);
+        ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+        ps.match = 0.5f;
 
-        // Search for any TMP font in project
-        string[] guids = AssetDatabase.FindAssets("t:TMP_FontAsset");
-        if (guids.Length > 0)
-        {
-            string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-            tmpFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
-        }
-
-        if (tmpFont == null)
-            Debug.LogWarning("SceneSetup: No TMP font found! Import TMP Essentials first (Window > TextMeshPro > Import TMP Essential Resources)");
-
-        return tmpFont;
+        EnsureFolder("Assets/_Project/UI");
+        AssetDatabase.CreateAsset(ps, PanelSettingsPath);
+        AssetDatabase.SaveAssets();
+        Debug.Log($"Created PanelSettings at {PanelSettingsPath}");
+        return ps;
     }
 
     // ──────────────────────────────────────────────
@@ -39,6 +36,7 @@ public static class SceneSetup
     public static void SetupMainMenu()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var panelSettings = GetOrCreatePanelSettings();
 
         // ── Camera ──
         var camGO = new GameObject("Main Camera");
@@ -67,90 +65,37 @@ public static class SceneSetup
         var saveGO = new GameObject("[SaveManager]");
         saveGO.AddComponent<SaveManager>();
 
-        // ── SceneLoader (persistent) ──
+        // ── SceneLoader (persistent) with FadeOverlay ──
         var slGO = new GameObject("[SceneLoader]");
         var sceneLoader = slGO.AddComponent<SceneLoader>();
 
-        // Fade canvas
-        var fadeCanvasGO = new GameObject("FadeCanvas");
-        fadeCanvasGO.transform.SetParent(slGO.transform);
-        var fadeCanvas = fadeCanvasGO.AddComponent<Canvas>();
-        fadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        fadeCanvas.sortingOrder = 999;
-        var fadeScaler = fadeCanvasGO.AddComponent<CanvasScaler>();
-        fadeScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        fadeScaler.referenceResolution = new Vector2(1080, 1920);
+        var fadeGO = new GameObject("FadeOverlay");
+        fadeGO.transform.SetParent(slGO.transform);
+        var fadeDoc = fadeGO.AddComponent<UIDocument>();
+        fadeDoc.panelSettings = panelSettings;
+        fadeDoc.sortingOrder = 100;
+        var fadeUxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlRoot + "FadeOverlay.uxml");
+        fadeDoc.visualTreeAsset = fadeUxml;
 
-        var fadeImgGO = new GameObject("FadeImage");
-        fadeImgGO.transform.SetParent(fadeCanvasGO.transform, false);
-        var fadeImg = fadeImgGO.AddComponent<Image>();
-        fadeImg.color = Color.black;
-        fadeImg.raycastTarget = false;
-        var fadeRect = fadeImgGO.GetComponent<RectTransform>();
-        fadeRect.anchorMin = Vector2.zero;
-        fadeRect.anchorMax = Vector2.one;
-        fadeRect.offsetMin = Vector2.zero;
-        fadeRect.offsetMax = Vector2.zero;
-
-        var fadeGroup = fadeImgGO.AddComponent<CanvasGroup>();
-        fadeGroup.alpha = 0f;
-        fadeGroup.blocksRaycasts = false;
-        fadeGroup.interactable = false;
-
+        // Wire SceneLoader → FadeUIDocument
         var slSO = new SerializedObject(sceneLoader);
-        slSO.FindProperty("fadeCanvasGroup").objectReferenceValue = fadeGroup;
+        slSO.FindProperty("fadeUIDocument").objectReferenceValue = fadeDoc;
         slSO.ApplyModifiedPropertiesWithoutUndo();
 
-        // ── Main UI Canvas ──
-        var canvasGO = new GameObject("Canvas");
-        var canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        var scaler = canvasGO.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080, 1920);
-        scaler.matchWidthOrHeight = 0.5f;
-        canvasGO.AddComponent<GraphicRaycaster>();
+        // ── Main Menu UI ──
+        var menuGO = new GameObject("MainMenuUI");
+        var menuDoc = menuGO.AddComponent<UIDocument>();
+        menuDoc.panelSettings = panelSettings;
+        menuDoc.sortingOrder = 0;
+        var menuUxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlRoot + "MainMenu.uxml");
+        menuDoc.visualTreeAsset = menuUxml;
 
-        // ── Title ──
-        var titleGO = CreateTMPText("Title", canvasGO.transform, "MINI GAMES", 72);
-        var titleRect = titleGO.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.5f, 1f);
-        titleRect.anchorMax = new Vector2(0.5f, 1f);
-        titleRect.pivot = new Vector2(0.5f, 1f);
-        titleRect.anchoredPosition = new Vector2(0, -80);
-        titleRect.sizeDelta = new Vector2(800, 120);
-
-        // ── Game List (simple vertical menu) ──
-        var listGO = new GameObject("GameList", typeof(RectTransform));
-        listGO.transform.SetParent(canvasGO.transform, false);
-        var listRect = listGO.GetComponent<RectTransform>();
-        listRect.anchorMin = new Vector2(0.1f, 0.2f);
-        listRect.anchorMax = new Vector2(0.9f, 0.8f);
-        listRect.offsetMin = Vector2.zero;
-        listRect.offsetMax = Vector2.zero;
-        var vlg = listGO.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 30;
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.padding = new RectOffset(20, 20, 20, 20);
-
-        // ── Menu Button Prefab ──
-        EnsureFolder("Assets/_Project/Prefabs/UI");
-        var menuBtnPrefab = CreateMenuButtonPrefab();
-        string menuBtnPath = "Assets/_Project/Prefabs/UI/MenuButton.prefab";
-        PrefabUtility.SaveAsPrefabAsset(menuBtnPrefab, menuBtnPath);
-        Object.DestroyImmediate(menuBtnPrefab);
-        var menuBtnAsset = AssetDatabase.LoadAssetAtPath<GameObject>(menuBtnPath);
-
-        // ── SimpleMenuController ──
-        var menuCtrl = listGO.AddComponent<SimpleMenuController>();
-        var menuSO = new SerializedObject(menuCtrl);
-        menuSO.FindProperty("buttonContainer").objectReferenceValue = listGO.transform;
-        menuSO.FindProperty("buttonPrefab").objectReferenceValue = menuBtnAsset;
-        menuSO.ApplyModifiedPropertiesWithoutUndo();
+        var menuCtrl = menuGO.AddComponent<MainMenuController>();
+        var buttonTemplateAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlRoot + "MainMenuButton.uxml");
+        var menuCtrlSO = new SerializedObject(menuCtrl);
+        menuCtrlSO.FindProperty("buttonTemplate").objectReferenceValue = buttonTemplateAsset;
+        menuCtrlSO.FindProperty("uiDocument").objectReferenceValue = menuDoc;
+        menuCtrlSO.ApplyModifiedPropertiesWithoutUndo();
 
         // ── EventSystem ──
         CreateEventSystem();
@@ -158,7 +103,6 @@ public static class SceneSetup
         // ── MiniGameData SO ──
         string soPath = "Assets/_Project/ScriptableObjects/StackTower_Data.asset";
         EnsureFolder("Assets/_Project/ScriptableObjects");
-        // Always recreate to update fields
         var soData = AssetDatabase.LoadAssetAtPath<MiniGameData>(soPath);
         if (soData == null)
         {
@@ -183,7 +127,7 @@ public static class SceneSetup
         EditorSceneManager.SaveScene(scene, scenePath);
         AddSceneToBuildSettings(scenePath);
 
-        Debug.Log("<color=green>✓ MainMenu scene setup complete!</color>");
+        Debug.Log("<color=green>✓ MainMenu scene setup complete! (UI Toolkit)</color>");
     }
 
     // ──────────────────────────────────────────────
@@ -193,6 +137,7 @@ public static class SceneSetup
     public static void SetupStackTower()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var panelSettings = GetOrCreatePanelSettings();
 
         // ── Camera ──
         var camGO = new GameObject("Main Camera");
@@ -224,103 +169,19 @@ public static class SceneSetup
         var towerGO = new GameObject("StackTowerManager");
         var towerManager = towerGO.AddComponent<StackTowerManager>();
 
-        // ── UI Canvas ──
-        var canvasGO = new GameObject("Canvas");
-        var canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        var scaler = canvasGO.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080, 1920);
-        scaler.matchWidthOrHeight = 0.5f;
-        canvasGO.AddComponent<GraphicRaycaster>();
+        // ── HUD UI (UIDocument) ──
+        var hudGO = new GameObject("StackTowerHUD");
+        var hudDoc = hudGO.AddComponent<UIDocument>();
+        hudDoc.panelSettings = panelSettings;
+        hudDoc.sortingOrder = 0;
+        var hudUxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlRoot + "StackTowerHUD.uxml");
+        hudDoc.visualTreeAsset = hudUxml;
 
-        // ── Score ──
-        var scoreGO = CreateTMPText("ScoreText", canvasGO.transform, "0", 96);
-        var scoreRect = scoreGO.GetComponent<RectTransform>();
-        scoreRect.anchorMin = new Vector2(0.5f, 1f);
-        scoreRect.anchorMax = new Vector2(0.5f, 1f);
-        scoreRect.pivot = new Vector2(0.5f, 1f);
-        scoreRect.anchoredPosition = new Vector2(0, -60);
-        scoreRect.sizeDelta = new Vector2(400, 120);
-
-        // ── Perfect Text ──
-        var perfectGO = CreateTMPText("PerfectText", canvasGO.transform, "PERFECT!", 56);
-        var perfectRect = perfectGO.GetComponent<RectTransform>();
-        perfectRect.anchorMin = new Vector2(0.5f, 0.65f);
-        perfectRect.anchorMax = new Vector2(0.5f, 0.65f);
-        perfectRect.sizeDelta = new Vector2(500, 80);
-        var perfectTMP = perfectGO.GetComponent<TextMeshProUGUI>();
-        perfectTMP.color = new Color(1f, 0.9f, 0.2f);
-        perfectGO.SetActive(false);
-
-        // ── Game Over Panel ──
-        var gameOverGO = new GameObject("GameOverPanel");
-        gameOverGO.transform.SetParent(canvasGO.transform, false);
-        var goRect = gameOverGO.AddComponent<RectTransform>();
-        goRect.anchorMin = Vector2.zero;
-        goRect.anchorMax = Vector2.one;
-        goRect.offsetMin = Vector2.zero;
-        goRect.offsetMax = Vector2.zero;
-        var dimImg = gameOverGO.AddComponent<Image>();
-        dimImg.color = new Color(0, 0, 0, 0.6f);
-
-        // Container
-        var containerGO = new GameObject("Container");
-        containerGO.transform.SetParent(gameOverGO.transform, false);
-        var containerRect = containerGO.AddComponent<RectTransform>();
-        containerRect.anchorMin = new Vector2(0.1f, 0.3f);
-        containerRect.anchorMax = new Vector2(0.9f, 0.7f);
-        containerRect.offsetMin = Vector2.zero;
-        containerRect.offsetMax = Vector2.zero;
-        var containerImg = containerGO.AddComponent<Image>();
-        containerImg.color = new Color(0.15f, 0.15f, 0.22f, 0.95f);
-        var vlg = containerGO.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 20;
-        vlg.childAlignment = TextAnchor.MiddleCenter;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-        vlg.padding = new RectOffset(40, 40, 40, 40);
-
-        var goTitleGO = CreateTMPText("GameOverTitle", containerGO.transform, "GAME OVER", 52);
-        goTitleGO.AddComponent<LayoutElement>().preferredHeight = 70;
-
-        var finalScoreGO = CreateTMPText("FinalScore", containerGO.transform, "Score: 0", 40);
-        finalScoreGO.AddComponent<LayoutElement>().preferredHeight = 55;
-
-        var highScoreGO = CreateTMPText("HighScore", containerGO.transform, "Best: 0", 32);
-        highScoreGO.GetComponent<TextMeshProUGUI>().color = new Color(1f, 0.85f, 0.3f);
-        highScoreGO.AddComponent<LayoutElement>().preferredHeight = 45;
-
-        // Buttons
-        var btnRowGO = new GameObject("Buttons");
-        btnRowGO.transform.SetParent(containerGO.transform, false);
-        btnRowGO.AddComponent<RectTransform>();
-        var btnRowHlg = btnRowGO.AddComponent<HorizontalLayoutGroup>();
-        btnRowHlg.spacing = 30;
-        btnRowHlg.childAlignment = TextAnchor.MiddleCenter;
-        btnRowHlg.childForceExpandWidth = false;
-        btnRowHlg.childForceExpandHeight = false;
-        btnRowGO.AddComponent<LayoutElement>().preferredHeight = 80;
-
-        var restartBtn = CreateButton("RestartButton", btnRowGO.transform, "REJOUER",
-            new Color(0.2f, 0.75f, 0.4f), 300, 70);
-        var menuBtn = CreateButton("MenuButton", btnRowGO.transform, "MENU",
-            new Color(0.5f, 0.5f, 0.6f), 220, 70);
-
-        gameOverGO.SetActive(false);
-
-        // ── Wire StackTowerUI ──
-        var towerUI = canvasGO.AddComponent<StackTowerUI>();
-        var uiSO = new SerializedObject(towerUI);
-        uiSO.FindProperty("scoreText").objectReferenceValue = scoreGO.GetComponent<TextMeshProUGUI>();
-        uiSO.FindProperty("perfectText").objectReferenceValue = perfectTMP;
-        uiSO.FindProperty("gameOverPanel").objectReferenceValue = gameOverGO;
-        uiSO.FindProperty("finalScoreText").objectReferenceValue = finalScoreGO.GetComponent<TextMeshProUGUI>();
-        uiSO.FindProperty("highScoreText").objectReferenceValue = highScoreGO.GetComponent<TextMeshProUGUI>();
-        uiSO.FindProperty("restartButton").objectReferenceValue = restartBtn.GetComponent<Button>();
-        uiSO.FindProperty("menuButton").objectReferenceValue = menuBtn.GetComponent<Button>();
-        uiSO.FindProperty("towerManager").objectReferenceValue = towerManager;
-        uiSO.ApplyModifiedPropertiesWithoutUndo();
+        var hudCtrl = hudGO.AddComponent<StackTowerUIController>();
+        var hudSO = new SerializedObject(hudCtrl);
+        hudSO.FindProperty("uiDocument").objectReferenceValue = hudDoc;
+        hudSO.FindProperty("towerManager").objectReferenceValue = towerManager;
+        hudSO.ApplyModifiedPropertiesWithoutUndo();
 
         // ── EventSystem ──
         CreateEventSystem();
@@ -331,194 +192,12 @@ public static class SceneSetup
         EditorSceneManager.SaveScene(scene, scenePath);
         AddSceneToBuildSettings(scenePath);
 
-        Debug.Log("<color=green>✓ StackTower scene setup complete!</color>");
+        Debug.Log("<color=green>✓ StackTower scene setup complete! (UI Toolkit)</color>");
     }
 
     // ──────────────────────────────────────────────
     //  HELPERS
     // ──────────────────────────────────────────────
-
-    private static GameObject CreateMenuButtonPrefab()
-    {
-        // Big button: colored background, game name + high score
-        var btnGO = new GameObject("MenuButton", typeof(RectTransform));
-        var btnRect = btnGO.GetComponent<RectTransform>();
-        btnRect.sizeDelta = new Vector2(0, 160);
-        var btnLE = btnGO.AddComponent<LayoutElement>();
-        btnLE.preferredHeight = 160;
-        btnLE.minHeight = 160;
-
-        var btnImg = btnGO.AddComponent<Image>();
-        btnImg.color = new Color(0.2f, 0.7f, 0.9f);
-        var btn = btnGO.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        var colors = btn.colors;
-        colors.highlightedColor = new Color(1, 1, 1, 0.85f);
-        colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
-        btn.colors = colors;
-
-        // Game name (large)
-        var nameGO = CreateTMPText("GameName", btnGO.transform, "Game Name", 42);
-        var nameRect = nameGO.GetComponent<RectTransform>();
-        nameRect.anchorMin = new Vector2(0, 0.35f);
-        nameRect.anchorMax = new Vector2(1, 1f);
-        nameRect.offsetMin = new Vector2(30, 0);
-        nameRect.offsetMax = new Vector2(-30, -10);
-        var nameTMP = nameGO.GetComponent<TextMeshProUGUI>();
-        nameTMP.fontStyle = FontStyles.Bold;
-        nameTMP.alignment = TextAlignmentOptions.Center;
-
-        // High score (smaller, below)
-        var hsGO = CreateTMPText("HighScore", btnGO.transform, "Best: 0", 26);
-        var hsRect = hsGO.GetComponent<RectTransform>();
-        hsRect.anchorMin = new Vector2(0, 0f);
-        hsRect.anchorMax = new Vector2(1, 0.4f);
-        hsRect.offsetMin = new Vector2(30, 10);
-        hsRect.offsetMax = new Vector2(-30, 0);
-        var hsTMP = hsGO.GetComponent<TextMeshProUGUI>();
-        hsTMP.color = new Color(1f, 1f, 1f, 0.7f);
-        hsTMP.alignment = TextAlignmentOptions.Center;
-
-        return btnGO;
-    }
-
-    private static GameObject CreateMiniGameCardPrefab()
-    {
-        var cardGO = new GameObject("MiniGameCard");
-        var cardRect = cardGO.AddComponent<RectTransform>();
-        cardRect.sizeDelta = new Vector2(600, 900);
-
-        var cardLE = cardGO.AddComponent<LayoutElement>();
-        cardLE.preferredWidth = 600;
-        cardLE.preferredHeight = 900;
-        cardLE.minWidth = 600;
-        cardLE.minHeight = 900;
-
-        // Background
-        var bgImg = cardGO.AddComponent<Image>();
-        bgImg.color = new Color(0.18f, 0.18f, 0.25f, 0.95f);
-        bgImg.raycastTarget = true;
-
-        var vlg = cardGO.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 20;
-        vlg.childAlignment = TextAnchor.MiddleCenter;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.padding = new RectOffset(40, 40, 50, 40);
-
-        // Icon placeholder
-        var iconGO = new GameObject("Icon");
-        iconGO.transform.SetParent(cardGO.transform, false);
-        var iconImg = iconGO.AddComponent<Image>();
-        iconImg.color = new Color(0.3f, 0.3f, 0.4f);
-        iconImg.raycastTarget = false;
-        var iconLE = iconGO.AddComponent<LayoutElement>();
-        iconLE.preferredWidth = 250;
-        iconLE.preferredHeight = 250;
-        iconLE.minHeight = 250;
-
-        // Title
-        var titleGO = CreateTMPText("Title", cardGO.transform, "Game Name", 48);
-        titleGO.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
-        var titleLE = titleGO.AddComponent<LayoutElement>();
-        titleLE.preferredHeight = 70;
-        titleLE.minHeight = 70;
-
-        // Description
-        var descGO = CreateTMPText("Description", cardGO.transform, "Description du jeu", 26);
-        var descTMP = descGO.GetComponent<TextMeshProUGUI>();
-        descTMP.color = new Color(0.7f, 0.7f, 0.75f);
-        descTMP.textWrappingMode = TextWrappingModes.Normal;
-        var descLE = descGO.AddComponent<LayoutElement>();
-        descLE.preferredHeight = 100;
-        descLE.minHeight = 60;
-
-        // High Score
-        var hsGO = CreateTMPText("HighScore", cardGO.transform, "Best: 0", 34);
-        var hsTMP = hsGO.GetComponent<TextMeshProUGUI>();
-        hsTMP.color = new Color(1f, 0.85f, 0.3f);
-        var hsLE = hsGO.AddComponent<LayoutElement>();
-        hsLE.preferredHeight = 50;
-        hsLE.minHeight = 50;
-
-        // Spacer
-        var spacer = new GameObject("Spacer");
-        spacer.transform.SetParent(cardGO.transform, false);
-        spacer.AddComponent<RectTransform>();
-        var spacerLE = spacer.AddComponent<LayoutElement>();
-        spacerLE.flexibleHeight = 1;
-
-        // Play button
-        var playBtn = CreateButton("PlayButton", cardGO.transform, "JOUER",
-            new Color(0.2f, 0.75f, 0.4f), 350, 90);
-        var playBtnLE = playBtn.AddComponent<LayoutElement>();
-        playBtnLE.preferredWidth = 350;
-        playBtnLE.preferredHeight = 90;
-        playBtnLE.minHeight = 90;
-
-        // MiniGameCard component
-        var card = cardGO.AddComponent<MiniGameCard>();
-        var cardSO = new SerializedObject(card);
-        cardSO.FindProperty("iconImage").objectReferenceValue = iconImg;
-        cardSO.FindProperty("titleText").objectReferenceValue = titleGO.GetComponent<TextMeshProUGUI>();
-        cardSO.FindProperty("highScoreText").objectReferenceValue = hsTMP;
-        cardSO.FindProperty("descriptionText").objectReferenceValue = descTMP;
-        cardSO.FindProperty("playButton").objectReferenceValue = playBtn.GetComponent<Button>();
-        cardSO.FindProperty("backgroundImage").objectReferenceValue = bgImg;
-        cardSO.ApplyModifiedPropertiesWithoutUndo();
-
-        return cardGO;
-    }
-
-    private static GameObject CreateTMPText(string name, Transform parent, string text, float fontSize)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        go.AddComponent<RectTransform>();
-        var tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = fontSize;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.raycastTarget = false;
-
-        // Assign TMP font
-        var font = GetTMPFont();
-        if (font != null)
-            tmp.font = font;
-
-        return go;
-    }
-
-    private static GameObject CreateButton(string name, Transform parent, string label, Color color, float w, float h)
-    {
-        var btnGO = new GameObject(name);
-        btnGO.transform.SetParent(parent, false);
-        var btnRect = btnGO.AddComponent<RectTransform>();
-        btnRect.sizeDelta = new Vector2(w, h);
-        var btnImg = btnGO.AddComponent<Image>();
-        btnImg.color = color;
-        var btn = btnGO.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-
-        // Button color tint
-        var colors = btn.colors;
-        colors.highlightedColor = new Color(1, 1, 1, 0.9f);
-        colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
-        btn.colors = colors;
-
-        var textGO = CreateTMPText("Text", btnGO.transform, label, 30);
-        var textRect = textGO.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        textGO.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
-
-        return btnGO;
-    }
 
     private static void CreateEventSystem()
     {

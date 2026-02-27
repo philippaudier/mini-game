@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="../USS/Common.uss" />
+    <ui:Style src="../USS/StackTowerHUD.uss" />
+    <ui:VisualElement name="hud-root" picking-mode="Ignore">
+        <ui:Label name="score-label" text="0" picking-mode="Ignore" />
+        <ui:Label name="perfect-label" text="PERFECT!" picking-mode="Ignore" />
+        <ui:VisualElement name="game-over-panel" class="hidden">
+            <ui:VisualElement name="game-over-container">
+                <ui:Label name="game-over-title" text="GAME OVER" />
+                <ui:Label name="final-score" text="Score: 0" />
+                <ui:Label name="high-score" text="Best: 0" />
+                <ui:VisualElement name="button-row">
+                    <ui:VisualElement name="restart-button" class="go-button">
+                        <ui:Label text="REJOUER" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="menu-button" class="go-button">
+                        <ui:Label text="MENU" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
