@@ -21,6 +21,56 @@ public class SceneLoader : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        EnsureFadeOverlay();
+    }
+
+    private void EnsureFadeOverlay()
+    {
+        if (fadeUIDocument != null) return;
+
+        // Load UXML asset
+        var fadeUxml = Resources.Load<VisualTreeAsset>("FadeOverlay");
+        // Try from Assets path via runtime loading
+        if (fadeUxml == null)
+        {
+            // Create fade overlay purely in code — no UXML dependency needed at runtime
+            var fadeGO = new GameObject("FadeOverlay");
+            fadeGO.transform.SetParent(transform);
+            fadeUIDocument = fadeGO.AddComponent<UIDocument>();
+            fadeUIDocument.sortingOrder = 100;
+
+            // We need to wait one frame for the UIDocument to initialize,
+            // then build the overlay manually
+            StartCoroutine(BuildFadeOverlayNextFrame());
+            return;
+        }
+
+        var go = new GameObject("FadeOverlay");
+        go.transform.SetParent(transform);
+        fadeUIDocument = go.AddComponent<UIDocument>();
+        fadeUIDocument.sortingOrder = 100;
+        fadeUIDocument.visualTreeAsset = fadeUxml;
+    }
+
+    private IEnumerator BuildFadeOverlayNextFrame()
+    {
+        yield return null; // wait for UIDocument to initialize
+
+        var root = fadeUIDocument.rootVisualElement;
+        if (root == null) yield break;
+
+        var overlay = new VisualElement();
+        overlay.name = "fade-overlay";
+        overlay.pickingMode = PickingMode.Ignore;
+        overlay.style.position = Position.Absolute;
+        overlay.style.left = 0;
+        overlay.style.top = 0;
+        overlay.style.right = 0;
+        overlay.style.bottom = 0;
+        overlay.style.backgroundColor = Color.black;
+        overlay.style.opacity = 0f;
+        root.Add(overlay);
     }
 
     private VisualElement GetFadeOverlay()
