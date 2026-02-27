@@ -121,7 +121,7 @@ public static class SceneSetup
         titleRect.sizeDelta = new Vector2(800, 120);
 
         // ── Carousel ScrollRect ──
-        var scrollGO = new GameObject("CarouselScroll");
+        var scrollGO = new GameObject("CarouselScroll", typeof(RectTransform));
         scrollGO.transform.SetParent(canvasGO.transform, false);
         var scrollRectTransform = scrollGO.GetComponent<RectTransform>();
         scrollRectTransform.anchorMin = new Vector2(0, 0.15f);
@@ -130,9 +130,9 @@ public static class SceneSetup
         scrollRectTransform.offsetMax = Vector2.zero;
 
         // Viewport (child with Mask — this is what clips the content)
-        var viewportGO = new GameObject("Viewport");
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform));
         viewportGO.transform.SetParent(scrollGO.transform, false);
-        var viewportRect = viewportGO.AddComponent<RectTransform>();
+        var viewportRect = viewportGO.GetComponent<RectTransform>();
         viewportRect.anchorMin = Vector2.zero;
         viewportRect.anchorMax = Vector2.one;
         viewportRect.offsetMin = Vector2.zero;
@@ -143,9 +143,9 @@ public static class SceneSetup
         viewportGO.AddComponent<Mask>().showMaskGraphic = false;
 
         // Content (child of Viewport — holds the cards)
-        var contentGO = new GameObject("Content");
+        var contentGO = new GameObject("Content", typeof(RectTransform));
         contentGO.transform.SetParent(viewportGO.transform, false);
-        var contentRect = contentGO.AddComponent<RectTransform>();
+        var contentRect = contentGO.GetComponent<RectTransform>();
         // Stretch full height, grow horizontally from left
         contentRect.anchorMin = new Vector2(0, 0);
         contentRect.anchorMax = new Vector2(0, 1);
